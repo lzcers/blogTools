@@ -12,7 +12,9 @@ const sourceDocPath = path.format({ dir: 'C:\\code\\docs\\blog' });
 // 目标目录
 const targetPath = path.format({ dir: 'C:\\code\\new_blog\\' });
 // 文档目录
-const destPath = path.format({ dir: 'C:\\code\\new_blog\\docs\\articles' });
+const targetDocPath = path.format({
+    dir: 'C:\\code\\new_blog\\docs\\articles'
+});
 
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数
@@ -40,10 +42,10 @@ const cSaveToRepo = () => {
 
 const cPublish = () => {
     const push = () =>
-        genTagslist(destPath).then(tagsList => {
+        genTagslist(targetDocPath).then(tagsList => {
             fs.writeFile(
                 path.format({
-                    dir: destPath,
+                    dir: targetDocPath,
                     base: '/tags.json'
                 }),
                 JSON.stringify(tagsList, null, '  '),
@@ -63,22 +65,22 @@ const cPublish = () => {
                         console.log(push);
                         execSync(push, { cwd: targetPath });
                     } catch (e) {
-                        console.log('推送失败!');
+                        console.log('推送失败!' + e.stdout);
                     }
                 }
             );
         });
 
     // 1.先干掉文件夹
-    delFolder(destPath);
-    if (!fs.existsSync(destPath)) {
-        fs.mkdir(destPath, function(err) {
+    delFolder(targetDocPath);
+    if (!fs.existsSync(targetDocPath)) {
+        fs.mkdir(targetDocPath, function(err) {
             if (err) {
                 console.log(err);
                 return;
             }
             // 2. 然后重新拷贝，并生成 tags 调用 git push 操作
-            copyFolder(sourceDocPath, destPath, push);
+            copyFolder(sourceDocPath, targetDocPath, push);
         });
     }
 };
