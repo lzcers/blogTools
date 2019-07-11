@@ -1,0 +1,14 @@
+{
+    "name": "blog_tools",
+    "version": "1.0.0",
+    "description": "博客用的命令行工具",
+    "scripts": {},
+    "bin": {
+        "blog": "pubTool.js"
+    },
+    "dependencies": {
+        "front-matter": "^3.0.2"
+    },
+    "author": "Zack",
+    "license": "MIT"
+}
