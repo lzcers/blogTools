@@ -39,8 +39,7 @@ const cSaveToRepo = () => {
 };
 
 const cPublish = () => {
-    const push = () => {
-        // 生成 tags
+    const push = () =>
         genTagslist(destPath).then(tagsList => {
             fs.writeFile(
                 path.format({
@@ -69,7 +68,7 @@ const cPublish = () => {
                 }
             );
         });
-    };
+
     // 1.先干掉文件夹
     delFolder(destPath);
     if (!fs.existsSync(destPath)) {
