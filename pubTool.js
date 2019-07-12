@@ -91,6 +91,15 @@ const commandList = {
     sp: () => (cSaveToRepo(), cPublish())
 };
 
+console.log(`
+----------------------------------------
+            Ksana 博客自用工具
+----------------------------------------
+    s   := 保存文档至仓库
+    p   := 发布博文
+    sp  := 保存文档并发布博文
+`);
+
 // 执行命令
 if (!!commandName) {
     const command = commandList[commandName];
