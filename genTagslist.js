@@ -23,7 +23,7 @@ const genTagslist = postsDir => {
                             fs.writeFileSync(
                                 path.format({ dir: postsDir, base: i }),
                                 data.replace(
-                                    /\]\(\.(\\|\/)imgs(\\|\/)/g,
+                                    /\]\(\.?(\\|\/)?imgs(\\|\/)/g,
                                     '](/articles/imgs/'
                                 ),
                                 'utf8'
@@ -35,7 +35,7 @@ const genTagslist = postsDir => {
                                 Content:
                                     body
                                         .replace(
-                                            /\]\(\.(\\|\/)imgs(\\|\/)/g,
+                                            /\]\(\.?(\\|\/)?imgs(\\|\/)/g,
                                             '](/articles/imgs/'
                                         )
                                         .split(/(。)/g, 10)

@@ -10,10 +10,10 @@ const { genTagslist } = require('./genTagslist.js');
 const sourcePath = path.format({ dir: 'C:\\code\\docs\\' });
 const sourceDocPath = path.format({ dir: 'C:\\code\\docs\\blog' });
 // 目标目录
-const targetPath = path.format({ dir: 'C:\\code\\new_blog\\' });
+const targetPath = path.format({ dir: 'C:\\code\\blog\\' });
 // 文档目录
 const targetDocPath = path.format({
-    dir: 'C:\\code\\new_blog\\docs\\articles'
+    dir: 'C:\\code\\blog\\docs\\articles'
 });
 
 const argv = process.argv.slice(2);
