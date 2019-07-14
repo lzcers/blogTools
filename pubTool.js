@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
-const { exec, execSync } = require('child_process');
+const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+
+const { uploadOSS } = require('./aliyunOSS.js');
 const { delFolder, copyFolder } = require('./utils.js');
 const { genTagslist } = require('./genTagslist.js');
 
-// 源目录
-const sourcePath = path.format({ dir: 'C:\\code\\docs\\' });
-const sourceDocPath = path.format({ dir: 'C:\\code\\docs\\blog' });
-// 目标目录
-const targetPath = path.format({ dir: 'C:\\code\\blog\\' });
-// 文档目录
-const targetDocPath = path.format({
-    dir: 'C:\\code\\blog\\docs\\articles'
-});
+const {
+    blogRootPath,
+    sourcePath,
+    sourceDocPath,
+    targetPath,
+    targetDocPath
+} = require('./config.js');
 
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数
@@ -88,6 +88,7 @@ const cPublish = () => {
 const commandList = {
     s: cSaveToRepo,
     p: cPublish,
+    uo: () => uploadOSS(blogRootPath),
     sp: () => (cSaveToRepo(), cPublish())
 };
 
@@ -98,6 +99,7 @@ console.log(`
     s   := 保存文档至仓库
     p   := 发布博文
     sp  := 保存文档并发布博文
+    uo  := 博客静态资源更新至 OSS 
 `);
 
 // 执行命令
