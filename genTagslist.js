@@ -36,7 +36,7 @@ const genTagslist = postsDir => {
                                     body
                                         .replace(
                                             /\]\(\.?(\\|\/)?imgs(\\|\/)/g,
-                                            '](/https://ksana.oss-cn-shenzhen.aliyuncs.com/articles/imgs/'
+                                            '](https://ksana.oss-cn-shenzhen.aliyuncs.com/articles/imgs/'
                                         )
                                         .split(/(。)/g, 10)
                                         .join('') + '<strong>……</strong>'
