@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const { uploadOSS } = require('./aliyunOSS.js');
+const { uploadOSS, aliOSS } = require('./aliyunOSS.js');
 const { delFolder, copyFolder } = require('./utils.js');
 const { genTagslist } = require('./genTagslist.js');
 
@@ -56,6 +56,8 @@ const cPublish = () => {
                     console.log('----------------------------------------');
                     console.log('正在推送文章...');
                     try {
+                        // 上传静态资源
+                        uploadOSS(blogRootPath);
                         const add = 'git add .',
                             commit = 'git commit -m "update posts..."',
                             push = 'git push';

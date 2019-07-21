@@ -24,7 +24,7 @@ const genTagslist = postsDir => {
                                 path.format({ dir: postsDir, base: i }),
                                 data.replace(
                                     /\]\(\.?(\\|\/)?imgs(\\|\/)/g,
-                                    '](/articles/imgs/'
+                                    '](https://ksana.oss-cn-shenzhen.aliyuncs.com/articles/imgs/'
                                 ),
                                 'utf8'
                             );
@@ -36,7 +36,7 @@ const genTagslist = postsDir => {
                                     body
                                         .replace(
                                             /\]\(\.?(\\|\/)?imgs(\\|\/)/g,
-                                            '](/articles/imgs/'
+                                            '](/https://ksana.oss-cn-shenzhen.aliyuncs.com/articles/imgs/'
                                         )
                                         .split(/(。)/g, 10)
                                         .join('') + '<strong>……</strong>'

@@ -23,8 +23,15 @@ const getUploadFiles = rootPath =>
     getAllFilesName(rootPath)
         .filter(file => {
             const extName = path.extname(file);
+            const pic = ['.png', '.jpg', '.webp', '.jpeg'];
             // 只上传 css 和 js 文件
-            if (extName === '.css' || extName === '.js') return true;
+            if (
+                extName === '.css' ||
+                extName === '.js' ||
+                extName === '.json' ||
+                pic.some(name => name === extName)
+            )
+                return true;
             return false;
         })
         .map(f => path.parse(f));
@@ -46,5 +53,6 @@ function uploadOSS(rootPath, files) {
 }
 
 module.exports = {
-    uploadOSS: rootPath => uploadOSS(rootPath, getUploadFiles(rootPath))
+    uploadOSS: rootPath => uploadOSS(rootPath, getUploadFiles(rootPath)),
+    aliOSS: client
 };
