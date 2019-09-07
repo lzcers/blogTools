@@ -61,11 +61,11 @@ const cPublish = () => {
                         const add = 'git add .',
                             commit = 'git commit -m "update posts..."',
                             push = 'git push';
-                        execSync(add, { cwd: targetPath });
-                        console.log(commit);
-                        execSync(commit, { cwd: targetPath });
-                        console.log(push);
-                        execSync(push, { cwd: targetPath });
+  //                      execSync(add, { cwd: targetPath });
+  //                      console.log(commit);
+  //                      execSync(commit, { cwd: targetPath });
+  //                      console.log(push);
+  //                      execSync(push, { cwd: targetPath });
                     } catch (e) {
                         console.log('推送失败!' + e.stdout);
                     }

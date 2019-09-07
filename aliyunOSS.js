@@ -43,7 +43,7 @@ function uploadOSS(rootPath, files) {
             let objName = path
                 .relative(rootPath, path.join(f.dir, f.base))
                 .replace(/\\/g, '/');
-            client.put(objName, path.format({ dir: path.join(f.dir, f.base) }));
+            client.put(objName, path.format({ dir: f.dir, base: f.base }));
         });
         console.log('博客文件上传至 OSS 成功！');
     } catch (e) {
