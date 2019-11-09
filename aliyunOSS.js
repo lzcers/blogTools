@@ -23,28 +23,34 @@ const getUploadFiles = rootPath =>
     getAllFilesName(rootPath)
         .filter(file => {
             const extName = path.extname(file);
-            const pic = ['.png', '.jpg', '.webp', '.jpeg'];
             // 只上传 css 和 js 文件
-            if (
-                extName === '.css' ||
-                extName === '.js' ||
-                extName === '.json' ||
-                extName === '.md' ||
-                pic.some(name => name === extName)
-            )
-                return true;
+            if (extName === '.css' || extName === '.js') return true;
             return false;
         })
         .map(f => path.parse(f));
 
-function uploadOSS(rootPath, files) {
+const getUploadPosts = rootPath =>
+    getAllFilesName(rootPath)
+        .filter(file => {
+            const typeList = ['.png', '.jpg', '.webp', '.jpeg', '.md', '.json'];
+            const extName = path.extname(file);
+            // 只上传 css 和 js 文件
+            if (typeList.some(name => name === extName)) return true;
+            return false;
+        })
+        .map(f => path.parse(f));
+
+function uploadOSS(rootPath, files, targetPath = '') {
     try {
         files.forEach(f => {
             // 取文件相对根目录的路径
             let objName = path
                 .relative(rootPath, path.join(f.dir, f.base))
                 .replace(/\\/g, '/');
-            client.put(objName, path.format({ dir: f.dir, base: f.base }));
+            client.put(
+                targetPath + objName,
+                path.format({ dir: f.dir, base: f.base })
+            );
         });
         console.log('博客文件上传至 OSS 成功！');
     } catch (e) {
@@ -55,5 +61,7 @@ function uploadOSS(rootPath, files) {
 
 module.exports = {
     uploadOSS: rootPath => uploadOSS(rootPath, getUploadFiles(rootPath)),
+    uploadPosts: rootPath =>
+        uploadOSS(rootPath, getUploadPosts(rootPath), 'articles/'),
     aliOSS: client
 };

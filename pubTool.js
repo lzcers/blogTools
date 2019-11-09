@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const { uploadOSS } = require('./aliyunOSS.js');
+const { uploadOSS, uploadPosts } = require('./aliyunOSS.js');
 const { genTagslist } = require('./genTagslist.js');
 
 const { blogRootPath, sourcePath, sourceDocPath } = require('./config.js');
@@ -52,7 +52,7 @@ const cPublish = () => {
                     console.log('正在推送文章...');
                     try {
                         // 上传静态资源
-                        uploadOSS(sourceDocPath);
+                        uploadPosts(sourceDocPath);
                     } catch (e) {
                         console.log('推送失败!' + e.stdout);
                     }
