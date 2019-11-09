@@ -4,17 +4,10 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const { uploadOSS, aliOSS } = require('./aliyunOSS.js');
-const { delFolder, copyFolder } = require('./utils.js');
+const { uploadOSS } = require('./aliyunOSS.js');
 const { genTagslist } = require('./genTagslist.js');
 
-const {
-    blogRootPath,
-    sourcePath,
-    sourceDocPath,
-    targetPath,
-    targetDocPath
-} = require('./config.js');
+const { blogRootPath, sourcePath, sourceDocPath } = require('./config.js');
 
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数
@@ -40,12 +33,14 @@ const cSaveToRepo = () => {
     }
 };
 
+// 把博文上传至 OSS
 const cPublish = () => {
     const push = () =>
-        genTagslist(targetDocPath).then(tagsList => {
+        // 生成 tags
+        genTagslist(sourceDocPath).then(tagsList => {
             fs.writeFile(
                 path.format({
-                    dir: targetDocPath,
+                    dir: sourceDocPath,
                     base: '/tags.json'
                 }),
                 JSON.stringify(tagsList, null, '  '),
@@ -57,34 +52,22 @@ const cPublish = () => {
                     console.log('正在推送文章...');
                     try {
                         // 上传静态资源
-                        uploadOSS(blogRootPath);
+                        uploadOSS(sourceDocPath);
                         const add = 'git add .',
                             commit = 'git commit -m "update posts..."',
                             push = 'git push';
-  //                      execSync(add, { cwd: targetPath });
-  //                      console.log(commit);
-  //                      execSync(commit, { cwd: targetPath });
-  //                      console.log(push);
-  //                      execSync(push, { cwd: targetPath });
+                        //                      execSync(add, { cwd: targetPath });
+                        //                      console.log(commit);
+                        //                      execSync(commit, { cwd: targetPath });
+                        //                      console.log(push);
+                        //                      execSync(push, { cwd: targetPath });
                     } catch (e) {
                         console.log('推送失败!' + e.stdout);
                     }
                 }
             );
         });
-
-    // 1.先干掉文件夹
-    delFolder(targetDocPath);
-    if (!fs.existsSync(targetDocPath)) {
-        fs.mkdir(targetDocPath, function(err) {
-            if (err) {
-                console.log(err);
-                return;
-            }
-            // 2. 然后重新拷贝，并生成 tags 调用 git push 操作
-            copyFolder(sourceDocPath, targetDocPath, push);
-        });
-    }
+    push();
 };
 
 const commandList = {

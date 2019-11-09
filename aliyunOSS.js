@@ -29,6 +29,7 @@ const getUploadFiles = rootPath =>
                 extName === '.css' ||
                 extName === '.js' ||
                 extName === '.json' ||
+                extName === '.md' ||
                 pic.some(name => name === extName)
             )
                 return true;
