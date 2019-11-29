@@ -19,6 +19,7 @@ const getAllFilesName = rootPath => {
     return filesPath;
 };
 
+// 上传 css, js
 const getUploadFiles = rootPath =>
     getAllFilesName(rootPath)
         .filter(file => {
@@ -29,12 +30,13 @@ const getUploadFiles = rootPath =>
         })
         .map(f => path.parse(f));
 
+
+// 上传 md 文档
 const getUploadPosts = rootPath =>
     getAllFilesName(rootPath)
         .filter(file => {
             const typeList = ['.png', '.jpg', '.webp', '.jpeg', '.md', '.json'];
             const extName = path.extname(file);
-            // 只上传 css 和 js 文件
             if (typeList.some(name => name === extName)) return true;
             return false;
         })
