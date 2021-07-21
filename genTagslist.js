@@ -6,7 +6,7 @@ const genTagslist = postsDir => {
     // 拿到所有的文章
     const arrPosts = fs
         .readdirSync(postsDir)
-        .filter(i => !i.match(/(.json|imgs)/))
+        .filter(i => !i.match(/(.json|imgs|DS_Store)/))
         .reverse();
 
     return Promise.all(
