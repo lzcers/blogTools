@@ -31,7 +31,7 @@ const genTagslist = postsDir => {
                             resolve({
                                 file_name: i,
                                 id: index,
-                                title: attributes,
+                                title: attributes.title,
                                 tags: attributes.Tags,
                                 publish_date: attributes.PublishDate,
                             
