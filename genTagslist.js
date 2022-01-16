@@ -29,17 +29,12 @@ const genTagslist = postsDir => {
                                 'utf8'
                             );
                             resolve({
-                                fileName: i,
-                                ID: index,
-                                ...attributes,
-                                Content:
-                                    body
-                                        .replace(
-                                            /\]\(\.?(\\|\/)?imgs(\\|\/)/g,
-                                            '](https://ksana.oss-cn-shenzhen.aliyuncs.com/articles/imgs/'
-                                        )
-                                        .split(/(。)/g, 10)
-                                        .join('') + '<strong>……</strong>'
+                                file_name: i,
+                                id: index,
+                                title: attributes,
+                                tags: attributes.Tags,
+                                publish_date: attributes.PublishDate,
+                            
                             });
                         }
                     );
