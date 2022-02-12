@@ -12,12 +12,12 @@ fs.readFile(
             fs.writeFile(
                 path.format({
                     dir: path.resolve(),
-                    base: 'articles/' + p.Title + '.md'
+                    base: 'articles/' + p.title + '.md'
                 }),
-                `---\nTitle: ${attributes.Title} \nTags: ${
-                    attributes.Tags
-                } \nPublishDate: ${attributes.PublishDate ||
-                    p.PublishDate} \n---\n${body}
+                `---\ntitle: ${attributes.title} \ntags: ${
+                    attributes.tags
+                } \nPublishDate: ${attributes.publishDate ||
+                    p.publishDate} \n---\n${body}
     `,
                 'utf8',
                 err => {
