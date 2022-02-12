@@ -25,7 +25,7 @@ const getUploadFiles = rootPath =>
         .filter(file => {
             const extName = path.extname(file);
             // 只上传 css 和 js 文件
-            if (extName === '.css' || extName === '.js' || extName === '.wasm') return true;
+            if (extName === '.css' || extName === '.js' || extName === '.wasm' || extName === '.ico') return true;
             return false;
         })
         .map(f => path.parse(f));
@@ -35,7 +35,7 @@ const getUploadFiles = rootPath =>
 const getUploadPosts = rootPath =>
     getAllFilesName(rootPath)
         .filter(file => {
-            const typeList = ['.png', '.jpg', '.webp', '.jpeg', '.md', '.json'];
+            const typeList = ['.png', '.jpg', '.webp', '.jpeg', '.md', '.json', '.ico'];
             const extName = path.extname(file);
             if (typeList.some(name => name === extName)) return true;
             return false;
