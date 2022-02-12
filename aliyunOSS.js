@@ -25,7 +25,7 @@ const getUploadFiles = rootPath =>
         .filter(file => {
             const extName = path.extname(file);
             // 只上传 css 和 js 文件
-            if (extName === '.css' || extName === '.js') return true;
+            if (extName === '.css' || extName === '.js' || extName === '.wasm') return true;
             return false;
         })
         .map(f => path.parse(f));
