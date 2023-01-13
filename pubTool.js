@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+const { execSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
 
-const { uploadOSS, uploadPosts } = require('./aliyunOSS.js');
-const { genTagslist } = require('./genTagslist.js');
+const { uploadOSS, uploadPosts } = require("./aliyunOSS.js");
+const { genTagslist } = require("./genTagslist.js");
 
-const { blogRootPath, sourcePath, sourceDocPath } = require('./config.js');
+const { blogRootPath, sourcePath, sourceDocPath } = require("./config.js");
 
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数
@@ -16,12 +16,12 @@ const [commandName, ...args] = argv;
 
 // save to repository
 const cSaveToRepo = () => {
-    console.log('----------------------------------------');
-    console.log('正在保存文章至远端仓库...');
+    console.log("----------------------------------------");
+    console.log("正在保存文章至远端仓库...");
     try {
-        const add = 'git add .',
+        const add = "git add .",
             commit = `git commit -m "update posts..."`,
-            push = 'git push';
+            push = "git push";
         console.log(add);
         execSync(add, { cwd: sourcePath });
         console.log(commit);
@@ -29,7 +29,7 @@ const cSaveToRepo = () => {
         console.log(push);
         execSync(push, { cwd: sourcePath });
     } catch (e) {
-        console.log('推送失败!' + e.stdout);
+        console.log("推送失败!" + e.stdout);
     }
 };
 
@@ -41,20 +41,20 @@ const cPublish = () => {
             fs.writeFile(
                 path.format({
                     dir: sourceDocPath,
-                    base: '/tags.json'
+                    base: "/postList.json",
                 }),
-                JSON.stringify(tagsList, null, '  '),
-                'utf8',
+                JSON.stringify(tagsList, null, "  "),
+                "utf8",
                 err => {
                     if (err) throw err;
-                    console.log('tagsList created success...');
-                    console.log('----------------------------------------');
-                    console.log('正在推送文章...');
+                    console.log("tagsList created success...");
+                    console.log("----------------------------------------");
+                    console.log("正在推送文章...");
                     try {
                         // 上传静态资源
                         uploadPosts(sourceDocPath);
                     } catch (e) {
-                        console.log('推送失败!' + e.stdout);
+                        console.log("推送失败!" + e.stdout);
                     }
                 }
             );
@@ -66,7 +66,7 @@ const commandList = {
     s: cSaveToRepo,
     p: cPublish,
     uo: () => uploadOSS(blogRootPath),
-    sp: () => (cSaveToRepo(), cPublish())
+    sp: () => (cSaveToRepo(), cPublish()),
 };
 
 console.log(`
