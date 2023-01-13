@@ -47,7 +47,7 @@ const cPublish = () => {
                 "utf8",
                 err => {
                     if (err) throw err;
-                    console.log("tagsList created success...");
+                    console.log("postList created success...");
                     console.log("----------------------------------------");
                     console.log("正在推送文章...");
                     try {
