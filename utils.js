@@ -1,22 +1,22 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 function copyFile(srcPath, tarPath, cb) {
     const rs = fs.createReadStream(srcPath);
-    rs.on('error', function(err) {
+    rs.on("error", function (err) {
         if (err) {
-            console.log('read error', srcPath);
+            console.log("read error", srcPath);
         }
         cb && cb(err);
     });
     const ws = fs.createWriteStream(tarPath);
-    ws.on('error', function(err) {
+    ws.on("error", function (err) {
         if (err) {
-            console.log('write error', tarPath);
+            console.log("write error", tarPath);
         }
         cb && cb(err);
     });
-    ws.on('close', function(ex) {
+    ws.on("close", function (ex) {
         cb && cb(ex);
     });
     rs.pipe(ws);
@@ -27,7 +27,7 @@ function delFolder(path) {
     if (fs.existsSync(path)) {
         files = fs.readdirSync(path);
         files.forEach((file, index) => {
-            let curPath = path + '/' + file;
+            let curPath = path + "/" + file;
             if (fs.statSync(curPath).isDirectory()) {
                 // recurse
                 delFolder(curPath);
@@ -41,9 +41,9 @@ function delFolder(path) {
 }
 
 function copyFolder(srcDir, tarDir, cb) {
-    fs.readdir(srcDir, function(err, files) {
+    fs.readdir(srcDir, function (err, files) {
         let count = 0;
-        const checkEnd = function() {
+        const checkEnd = function () {
             ++count == files.length && cb && cb();
         };
 
@@ -51,14 +51,14 @@ function copyFolder(srcDir, tarDir, cb) {
             checkEnd();
             return;
         }
-        files.forEach(function(file) {
+        files.forEach(function (file) {
             const srcPath = path.join(srcDir, file);
             const tarPath = path.join(tarDir, file);
 
-            fs.stat(srcPath, function(err, stats) {
+            fs.stat(srcPath, function (err, stats) {
                 if (stats.isDirectory()) {
-                    console.log('mkdir', tarPath);
-                    fs.mkdir(tarPath, function(err) {
+                    console.log("mkdir", tarPath);
+                    fs.mkdir(tarPath, function (err) {
                         copyFolder(srcPath, tarPath, checkEnd);
                     });
                 } else {
