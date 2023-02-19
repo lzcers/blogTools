@@ -4,10 +4,10 @@ const { execSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
-const { uploadOSS, uploadPosts } = require("./aliyunOSS.js");
+const { uploadOSS, uploadRelay, uploadPosts } = require("./aliyunOSS.js");
 const { genTagslist } = require("./genTagslist.js");
 
-const { blogRootPath, sourcePath, sourceDocPath } = require("./config.js");
+const { blogRootPath, sourcePath, sourceDocPath, relaySourcePath } = require("./config.js");
 
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数
@@ -67,16 +67,18 @@ const commandList = {
     p: cPublish,
     uo: () => uploadOSS(blogRootPath),
     sp: () => (cSaveToRepo(), cPublish()),
+    relay: () => uploadRelay(relaySourcePath),
 };
 
 console.log(`
 ----------------------------------------
             Ksana 博客自用工具
 ----------------------------------------
-    s   := 保存文档至仓库
-    p   := 发布博文
-    sp  := 保存文档并发布博文
-    uo  := 博客静态资源更新至 OSS 
+    s     := 保存文档至仓库
+    p     := 发布博文
+    sp    := 保存文档并发布博文
+    uo    := 博客静态资源更新至 OSS 
+    relay := 更新 Relay 静态资源到 OSS
 `);
 
 // 执行命令
