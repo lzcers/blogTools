@@ -9,6 +9,7 @@ const aliyunOSS_1 = __importDefault(require("./aliyunOSS"));
 const config_1 = require("./config");
 const utils_1 = require("./utils");
 const path_1 = __importDefault(require("path"));
+//  更新博文至 OSS
 async function uploadPostsToOSS() {
     const postsMetadata = await (0, utils_1.genPostMetadatalist)(config_1.blogPath);
     const postList = (0, utils_1.getPostList)(config_1.blogPath);
@@ -44,14 +45,36 @@ async function uploadPostsToOSS() {
         console.error("上传博文失败！", e);
     }
 }
+//  更新博客静态资源至 OSS
+async function uploadBlogToOSS() {
+    const files = (0, utils_1.getBlogFileList)(config_1.blogAppPath);
+    try {
+        const objList = [];
+        for (const post of files) {
+            const filePath = path_1.default.format(post);
+            const objName = path_1.default.relative(config_1.blogAppPath, filePath).replace(/\\/g, '/');
+            const data = fs_1.default.readFileSync(filePath);
+            objList.push({
+                name: objName,
+                data
+            });
+        }
+        await (0, aliyunOSS_1.default)(objList);
+    }
+    catch (e) {
+        console.error("上传博文失败！", e);
+    }
+}
 console.log(`
     ----------------------------------------
                 Ksana 博客自用工具
     ----------------------------------------
         uo    := 上传博文至 OSS
+        ao    := 上传博客至 OSS
 `);
 const commandList = {
-    uo: uploadPostsToOSS
+    uo: uploadPostsToOSS,
+    ao: uploadBlogToOSS
 };
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数

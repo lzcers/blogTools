@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.genPostMetadatalist = exports.replacePostAssetUrl = exports.getPostList = exports.getFileList = exports.getAllFilesName = void 0;
+exports.genPostMetadatalist = exports.replacePostAssetUrl = exports.getPostList = exports.getBlogFileList = exports.getAllFilesName = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const front_matter_1 = __importDefault(require("front-matter"));
@@ -51,18 +51,19 @@ function getAllFilesName(rootPath) {
 exports.getAllFilesName = getAllFilesName;
 ;
 // 上传博客静态资源 css, js
-function getFileList(rootPath) {
+function getBlogFileList(rootPath) {
     return getAllFilesName(rootPath)
         .filter(file => {
         const extName = path_1.default.extname(file);
         // 只上传 css 和 js 文件
-        if (extName === ".css" || extName === ".js" || extName === ".wasm" || extName === ".ico" || extName == ".html")
+        const typeList = [".css", ".js", ".wasm", ".ico", ".html", ".jpg", ",png", ".webp", ".ico"];
+        if (typeList.some(name => name === extName))
             return true;
         return false;
     })
         .map(f => path_1.default.parse(f));
 }
-exports.getFileList = getFileList;
+exports.getBlogFileList = getBlogFileList;
 // 上传博文以及引用的资源
 function getPostList(rootPath) {
     return getAllFilesName(rootPath)
