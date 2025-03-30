@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import uploadOSS from './aliyunOSS';
-import { blogPath } from './config';
-import { genPostMetadatalist, replacePostAssetUrl, getPostList } from './utils';
+import { blogPath, blogAppPath } from './config';
+import { genPostMetadatalist, replacePostAssetUrl, getPostList, getBlogFileList } from './utils';
 import path from 'path';
 
+//  更新博文至 OSS
 async function uploadPostsToOSS() {
     const postsMetadata = await genPostMetadatalist(blogPath);
     const postList = getPostList(blogPath);
@@ -38,16 +39,37 @@ async function uploadPostsToOSS() {
         console.error("上传博文失败！", e);
     }
 }
+//  更新博客静态资源至 OSS
+async function uploadBlogToOSS() {
+    const files = getBlogFileList(blogAppPath);
+    try {
+        const objList = [];
+        for (const post of files) {
+            const filePath = path.format(post);
+            const objName = path.relative(blogAppPath, filePath).replace(/\\/g, '/');
+            const data = fs.readFileSync(filePath);
+            objList.push({
+                name: objName,
+                data
+            });
+        }
+        await uploadOSS(objList);
+    } catch (e) {
+        console.error("上传博文失败！", e);
+    }
+}
 
 console.log(`
     ----------------------------------------
                 Ksana 博客自用工具
     ----------------------------------------
         uo    := 上传博文至 OSS
+        ao    := 上传博客至 OSS
 `);
 
 const commandList = {
-    uo: uploadPostsToOSS
+    uo: uploadPostsToOSS,
+    ao: uploadBlogToOSS
 };
 
 

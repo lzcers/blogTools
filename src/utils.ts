@@ -57,12 +57,13 @@ function getAllFilesName(rootPath: string) {
 };
 
 // 上传博客静态资源 css, js
-function getFileList(rootPath: string) {
+function getBlogFileList(rootPath: string) {
     return getAllFilesName(rootPath)
         .filter(file => {
             const extName = path.extname(file);
             // 只上传 css 和 js 文件
-            if (extName === ".css" || extName === ".js" || extName === ".wasm" || extName === ".ico" || extName == ".html") return true;
+            const typeList = [".css", ".js", ".wasm", ".ico", ".html", ".jpg", ",png", ".webp", ".ico"];
+            if (typeList.some(name => name === extName)) return true;
             return false;
         })
         .map(f => path.parse(f));
@@ -84,7 +85,7 @@ function getPostList(rootPath: string) {
 
 export {
     getAllFilesName,
-    getFileList,
+    getBlogFileList,
     getPostList,
     replacePostAssetUrl,
     genPostMetadatalist
