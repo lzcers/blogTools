@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import uploadOSS from './aliyunOSS';
-import { blogPath, blogAppPath } from './config';
+import { configBlogPath, configBlogAppPath } from './config';
 import { genPostMetadatalist, replacePostAssetUrl, getPostList, getBlogFileList } from './utils';
 import path from 'path';
 
 //  更新博文至 OSS
-async function uploadPostsToOSS() {
+async function uploadPostsToOSS(blogPath: string = configBlogPath) {
     const postsMetadata = await genPostMetadatalist(blogPath);
     const postList = getPostList(blogPath);
     try {
@@ -40,7 +40,7 @@ async function uploadPostsToOSS() {
     }
 }
 //  更新博客静态资源至 OSS
-async function uploadBlogToOSS() {
+async function uploadBlogToOSS(blogAppPath: string = configBlogAppPath) {
     const files = getBlogFileList(blogAppPath);
     try {
         const objList = [];
@@ -68,8 +68,8 @@ console.log(`
 `);
 
 const commandList = {
-    uo: uploadPostsToOSS,
-    ao: uploadBlogToOSS
+    uo: (...args: string[]) => uploadPostsToOSS(...args),
+    ao: (...args: string[]) => uploadBlogToOSS(...args)
 };
 
 
@@ -78,9 +78,9 @@ type CommandName = "uo";
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数
 // 只实现 commandName arg1 arg2 arg3 ... 的形式
-const [commandName] = argv;
+const [commandName, ...args] = argv;
 
 if (!!commandName) {
     const command = commandList[commandName as CommandName];
-    command && command();
+    command && command(...args);
 }
