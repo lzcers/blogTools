@@ -38,8 +38,15 @@ function genPostMetadatalist(postsDir: string) {
 
 // 替换博文中的图片链接
 function replacePostAssetUrl(postStr: string) {
-    return postStr.replace(/\]\(\.?(\\|\/)?imgs(\\|\/)/g, "](/articles/imgs/");
+    return postStr.replace(/!\[([^\]]*)\]\((?!http|https|\/)(.*?)\)/g, (match, altText, url) => {
+        const imageName = url.trim().split(/\\|\//).pop()?.trim();
+        if (imageName) {
+            return `![${altText}](articles/imgs/${imageName})`;
+        }
+        return match;
+    });
 }
+
 
 function getAllFilesName(rootPath: string) {
     const filesPath: string[] = [];
