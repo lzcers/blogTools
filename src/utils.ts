@@ -18,10 +18,14 @@ interface PostMetadata {
 
 // 拿到所有的文章生成目录
 function genPostMetadatalist(postsDir: string) {
-    const arrPosts = fs.readdirSync(postsDir).filter(i => !i.match(/(.json|imgs|DS_Store)/));
+    const arrPosts = fs.readdirSync(postsDir, { withFileTypes: true })
+        .filter(dirent => dirent.isFile() && !dirent.name.match(/(.json|DS_Store)/))
+        .map(dirent => dirent.name);
+
     return Promise.all(
         arrPosts.map((i, index) => new Promise<PostMetadata>((resolve, reject) => {
-            fs.readFile(path.format({ dir: postsDir, base: i }), "utf8", (err, data) => {
+            const filePath = path.format({ dir: postsDir, base: i });
+            fs.readFile(filePath, "utf8", (err, data) => {
                 if (err) reject(err);
                 const { attributes } = fm<PostFrontMatter>(data);
                 resolve({
