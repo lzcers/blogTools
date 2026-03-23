@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import fs from 'fs';
 import uploadOSS from './aliyunOSS';
 import { configBlogPath, configBlogAppPath } from './config';
-import { genPostMetadatalist, replacePostAssetUrl, getPostList, getBlogFileList } from './utils';
+import { genPostMetadatalist, getPostList, getBlogFileList } from './utils';
+import type { UploadObject } from './uploadTypes';
 import path from 'path';
 
 //  更新博文至 OSS
@@ -10,25 +10,24 @@ async function uploadPostsToOSS(blogPath: string = configBlogPath) {
     const postsMetadata = await genPostMetadatalist(blogPath);
     const postList = getPostList(blogPath);
     try {
-        const files = [];
-        for (const post of postList) {
+        const files: UploadObject[] = postList.map(post => {
             const filePath = path.format(post);
             const objName = path.relative(blogPath, filePath).replace(/\\/g, '/');
+
             if (post.ext === '.md') {
-                const content = fs.readFileSync(filePath, 'utf-8');
-                const processedContent = replacePostAssetUrl(content);
-                files.push({
+                return {
                     name: '/articles/' + objName,
-                    data: Buffer.from(processedContent)
-                });
-            } else {
-                const data = fs.readFileSync(filePath);
-                files.push({
-                    name: '/articles/' + objName,
-                    data
-                });
+                    filePath,
+                    transform: 'markdown'
+                };
             }
-        }
+
+            return {
+                name: '/articles/' + objName,
+                filePath
+            };
+        });
+
         // 上传所有博文和元数据
         files.push({
             name: '/articles/postsMetadata.json',
@@ -43,16 +42,16 @@ async function uploadPostsToOSS(blogPath: string = configBlogPath) {
 async function uploadBlogToOSS(blogAppPath: string = configBlogAppPath) {
     const files = getBlogFileList(blogAppPath);
     try {
-        const objList = [];
-        for (const post of files) {
+        const objList: UploadObject[] = files.map(post => {
             const filePath = path.format(post);
             const objName = path.relative(blogAppPath, filePath).replace(/\\/g, '/');
-            const data = fs.readFileSync(filePath);
-            objList.push({
+
+            return {
                 name: objName,
-                data
-            });
-        }
+                filePath
+            };
+        });
+
         await uploadOSS(objList);
     } catch (e) {
         console.error("上传博文失败！", e);
@@ -73,7 +72,7 @@ const commandList = {
 };
 
 
-type CommandName = "uo";
+type CommandName = keyof typeof commandList;
 
 const argv = process.argv.slice(2);
 // 第一个参数是命令， 后面跟命令的参数

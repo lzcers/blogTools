@@ -2,5 +2,6 @@ node_modules
 npm-debug.log*
 *.log
 .vscode
-config.ts
-config.js
+.env
+/config.ts
+/config.js

@@ -1,31 +1,211 @@
-import OSS from 'ali-oss';
-import { ossConfig } from './config';
+import os from "os";
+import path from "path";
+import { Worker } from "worker_threads";
+import { ossConfig } from "./config";
+import type {
+    UploadObject,
+    UploadWorkerData,
+    UploadWorkerRequest,
+    UploadWorkerResponse
+} from "./uploadTypes";
 
-const client = new OSS(ossConfig);
+const DEFAULT_WORKER_LIMIT = 8;
+const WORKER_COUNT_ENV = "BLOG_UPLOAD_WORKERS";
 
-interface OssObject {
-    name: string;
-    data: Buffer;
+interface PendingTask {
+    taskId: number;
+    obj: UploadObject;
 }
-export default async function uploadOSS(objList: OssObject[], targetPath = "") {
-    try {
-        console.log(`开始上传静态资源至 OSS,总共${objList.length}个文件.`);
-        let remainCount = objList.length;
-        await Promise.all(
-            objList.map(async obj => {
-                try {
-                    await client.put(targetPath + obj.name, obj.data);
-                    remainCount--;
-                    console.log(`[${obj.name}] 上传成功,剩余:${remainCount}`);
-                } catch (e) {
-                    console.error("上传失败:" + obj.name);
-                    console.error(e);
+
+interface FailedUpload {
+    name: string;
+    error: string;
+}
+
+function getAvailableWorkerCount(): number {
+    const availableCount = typeof os.availableParallelism === "function"
+        ? os.availableParallelism()
+        : os.cpus().length;
+
+    return Math.max(1, Math.min(DEFAULT_WORKER_LIMIT, availableCount));
+}
+
+function resolveWorkerCount(taskCount: number): number {
+    if (taskCount <= 0) {
+        return 0;
+    }
+
+    const configuredCount = Number.parseInt(process.env[WORKER_COUNT_ENV] ?? "", 10);
+    if (Number.isFinite(configuredCount) && configuredCount > 0) {
+        return Math.min(taskCount, configuredCount);
+    }
+
+    return Math.min(taskCount, getAvailableWorkerCount());
+}
+
+function getWorkerScriptPath(): string {
+    return path.resolve(__dirname, "uploadWorker.js");
+}
+
+async function runUploadWorkers(objList: UploadObject[], targetPath: string): Promise<FailedUpload[]> {
+    const workerCount = resolveWorkerCount(objList.length);
+    const taskQueue: PendingTask[] = objList.map((obj, taskId) => ({ obj, taskId }));
+    const failedUploads: FailedUpload[] = [];
+    let remainCount = objList.length;
+    let completedCount = 0;
+
+    console.log(`开始上传静态资源至 OSS,总共${objList.length}个文件,使用${workerCount}个线程.`);
+
+    if (workerCount === 0) {
+        return failedUploads;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+        const workers = new Set<Worker>();
+        const activeTasks = new Map<Worker, PendingTask | null>();
+        const workerScriptPath = getWorkerScriptPath();
+        const workerData: UploadWorkerData = {
+            ossConfig,
+            targetPath
+        };
+        let settled = false;
+        let shuttingDown = false;
+
+        const rejectAll = (error: Error) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            shuttingDown = true;
+
+            for (const worker of workers) {
+                worker.removeAllListeners("message");
+                worker.removeAllListeners("error");
+                worker.removeAllListeners("exit");
+                worker.terminate().catch(() => undefined);
+            }
+
+            reject(error);
+        };
+
+        const maybeResolve = () => {
+            if (settled) {
+                return;
+            }
+
+            if (completedCount !== objList.length) {
+                return;
+            }
+
+            const hasActiveTask = [...activeTasks.values()].some(task => task !== null);
+            if (hasActiveTask) {
+                return;
+            }
+
+            settled = true;
+            resolve();
+        };
+
+        const shutdownWorker = (worker: Worker) => {
+            activeTasks.set(worker, null);
+            const shutdownMessage: UploadWorkerRequest = { type: "shutdown" };
+            worker.postMessage(shutdownMessage);
+        };
+
+        const assignNextTask = (worker: Worker) => {
+            if (settled) {
+                return;
+            }
+
+            const nextTask = taskQueue.shift();
+            if (!nextTask) {
+                shutdownWorker(worker);
+                maybeResolve();
+                return;
+            }
+
+            activeTasks.set(worker, nextTask);
+            const uploadMessage: UploadWorkerRequest = {
+                type: "upload",
+                taskId: nextTask.taskId,
+                obj: nextTask.obj
+            };
+            worker.postMessage(uploadMessage);
+        };
+
+        for (let index = 0; index < workerCount; index++) {
+            const worker = new Worker(workerScriptPath, { workerData });
+            workers.add(worker);
+            activeTasks.set(worker, null);
+
+            worker.on("message", (message: UploadWorkerResponse) => {
+                const currentTask = activeTasks.get(worker);
+                if (!currentTask) {
+                    return;
                 }
-            })
-        )
+
+                activeTasks.set(worker, null);
+                completedCount++;
+                remainCount--;
+
+                if (message.type === "success") {
+                    console.log(`[${message.name}] 上传成功,剩余:${remainCount}`);
+                } else {
+                    failedUploads.push({
+                        name: message.name,
+                        error: message.error
+                    });
+                    console.error(`上传失败:${message.name}`);
+                    console.error(message.error);
+                }
+
+                assignNextTask(worker);
+                maybeResolve();
+            });
+
+            worker.on("error", error => {
+                rejectAll(error instanceof Error ? error : new Error(String(error)));
+            });
+
+            worker.on("exit", code => {
+                workers.delete(worker);
+                const currentTask = activeTasks.get(worker);
+                activeTasks.delete(worker);
+
+                if (shuttingDown) {
+                    return;
+                }
+
+                if (code !== 0) {
+                    const taskName = currentTask?.obj.name;
+                    rejectAll(new Error(
+                        taskName
+                            ? `上传线程异常退出(${code}),任务:${taskName}`
+                            : `上传线程异常退出(${code})`
+                    ));
+                }
+            });
+
+            assignNextTask(worker);
+        }
+    });
+
+    return failedUploads;
+}
+
+export default async function uploadOSS(objList: UploadObject[], targetPath = "") {
+    try {
+        const failedUploads = await runUploadWorkers(objList, targetPath);
+
+        if (failedUploads.length > 0) {
+            throw new Error(`共有${failedUploads.length}个文件上传失败。`);
+        }
+
         console.log("静态资源上传至 OSS 成功!");
     } catch (e) {
         console.error("静态资源上传至 OSS 失败!");
         console.error(e);
+        throw e;
     }
 }

@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = __importDefault(require("fs"));
 const aliyunOSS_1 = __importDefault(require("./aliyunOSS"));
 const config_1 = require("./config");
 const utils_1 = require("./utils");
@@ -14,26 +13,21 @@ async function uploadPostsToOSS(blogPath = config_1.configBlogPath) {
     const postsMetadata = await (0, utils_1.genPostMetadatalist)(blogPath);
     const postList = (0, utils_1.getPostList)(blogPath);
     try {
-        const files = [];
-        for (const post of postList) {
+        const files = postList.map(post => {
             const filePath = path_1.default.format(post);
             const objName = path_1.default.relative(blogPath, filePath).replace(/\\/g, '/');
             if (post.ext === '.md') {
-                const content = fs_1.default.readFileSync(filePath, 'utf-8');
-                const processedContent = (0, utils_1.replacePostAssetUrl)(content);
-                files.push({
+                return {
                     name: '/articles/' + objName,
-                    data: Buffer.from(processedContent)
-                });
+                    filePath,
+                    transform: 'markdown'
+                };
             }
-            else {
-                const data = fs_1.default.readFileSync(filePath);
-                files.push({
-                    name: '/articles/' + objName,
-                    data
-                });
-            }
-        }
+            return {
+                name: '/articles/' + objName,
+                filePath
+            };
+        });
         // 上传所有博文和元数据
         files.push({
             name: '/articles/postsMetadata.json',
@@ -49,16 +43,14 @@ async function uploadPostsToOSS(blogPath = config_1.configBlogPath) {
 async function uploadBlogToOSS(blogAppPath = config_1.configBlogAppPath) {
     const files = (0, utils_1.getBlogFileList)(blogAppPath);
     try {
-        const objList = [];
-        for (const post of files) {
+        const objList = files.map(post => {
             const filePath = path_1.default.format(post);
             const objName = path_1.default.relative(blogAppPath, filePath).replace(/\\/g, '/');
-            const data = fs_1.default.readFileSync(filePath);
-            objList.push({
+            return {
                 name: objName,
-                data
-            });
-        }
+                filePath
+            };
+        });
         await (0, aliyunOSS_1.default)(objList);
     }
     catch (e) {
