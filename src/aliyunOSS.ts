@@ -1,7 +1,8 @@
 import os from "os";
 import path from "path";
 import { Worker } from "worker_threads";
-import { ossConfig } from "./config";
+import { createUploadProgress } from "./cliUI";
+import { getOssConfig } from "./config";
 import type {
     UploadObject,
     UploadWorkerData,
@@ -20,6 +21,19 @@ interface PendingTask {
 interface FailedUpload {
     name: string;
     error: string;
+}
+
+interface UploadRunOptions {
+    label: string;
+    sourcePath: string;
+    displayTargetPath?: string;
+}
+
+interface UploadSummary {
+    total: number;
+    workerCount: number;
+    successfulCount: number;
+    failedUploads: FailedUpload[];
 }
 
 function getAvailableWorkerCount(): number {
@@ -47,165 +61,189 @@ function getWorkerScriptPath(): string {
     return path.resolve(__dirname, "uploadWorker.js");
 }
 
-async function runUploadWorkers(objList: UploadObject[], targetPath: string): Promise<FailedUpload[]> {
+async function runUploadWorkers(
+    objList: UploadObject[],
+    targetPath: string,
+    options: UploadRunOptions
+): Promise<UploadSummary> {
     const workerCount = resolveWorkerCount(objList.length);
     const taskQueue: PendingTask[] = objList.map((obj, taskId) => ({ obj, taskId }));
     const failedUploads: FailedUpload[] = [];
-    let remainCount = objList.length;
     let completedCount = 0;
-
-    console.log(`开始上传静态资源至 OSS,总共${objList.length}个文件,使用${workerCount}个线程.`);
-
-    if (workerCount === 0) {
-        return failedUploads;
-    }
-
-    await new Promise<void>((resolve, reject) => {
-        const workers = new Set<Worker>();
-        const activeTasks = new Map<Worker, PendingTask | null>();
-        const workerScriptPath = getWorkerScriptPath();
-        const workerData: UploadWorkerData = {
-            ossConfig,
-            targetPath
-        };
-        let settled = false;
-        let shuttingDown = false;
-
-        const rejectAll = (error: Error) => {
-            if (settled) {
-                return;
-            }
-
-            settled = true;
-            shuttingDown = true;
-
-            for (const worker of workers) {
-                worker.removeAllListeners("message");
-                worker.removeAllListeners("error");
-                worker.removeAllListeners("exit");
-                worker.terminate().catch(() => undefined);
-            }
-
-            reject(error);
-        };
-
-        const maybeResolve = () => {
-            if (settled) {
-                return;
-            }
-
-            if (completedCount !== objList.length) {
-                return;
-            }
-
-            const hasActiveTask = [...activeTasks.values()].some(task => task !== null);
-            if (hasActiveTask) {
-                return;
-            }
-
-            settled = true;
-            resolve();
-        };
-
-        const shutdownWorker = (worker: Worker) => {
-            activeTasks.set(worker, null);
-            const shutdownMessage: UploadWorkerRequest = { type: "shutdown" };
-            worker.postMessage(shutdownMessage);
-        };
-
-        const assignNextTask = (worker: Worker) => {
-            if (settled) {
-                return;
-            }
-
-            const nextTask = taskQueue.shift();
-            if (!nextTask) {
-                shutdownWorker(worker);
-                maybeResolve();
-                return;
-            }
-
-            activeTasks.set(worker, nextTask);
-            const uploadMessage: UploadWorkerRequest = {
-                type: "upload",
-                taskId: nextTask.taskId,
-                obj: nextTask.obj
-            };
-            worker.postMessage(uploadMessage);
-        };
-
-        for (let index = 0; index < workerCount; index++) {
-            const worker = new Worker(workerScriptPath, { workerData });
-            workers.add(worker);
-            activeTasks.set(worker, null);
-
-            worker.on("message", (message: UploadWorkerResponse) => {
-                const currentTask = activeTasks.get(worker);
-                if (!currentTask) {
-                    return;
-                }
-
-                activeTasks.set(worker, null);
-                completedCount++;
-                remainCount--;
-
-                if (message.type === "success") {
-                    console.log(`[${message.name}] 上传成功,剩余:${remainCount}`);
-                } else {
-                    failedUploads.push({
-                        name: message.name,
-                        error: message.error
-                    });
-                    console.error(`上传失败:${message.name}`);
-                    console.error(message.error);
-                }
-
-                assignNextTask(worker);
-                maybeResolve();
-            });
-
-            worker.on("error", error => {
-                rejectAll(error instanceof Error ? error : new Error(String(error)));
-            });
-
-            worker.on("exit", code => {
-                workers.delete(worker);
-                const currentTask = activeTasks.get(worker);
-                activeTasks.delete(worker);
-
-                if (shuttingDown) {
-                    return;
-                }
-
-                if (code !== 0) {
-                    const taskName = currentTask?.obj.name;
-                    rejectAll(new Error(
-                        taskName
-                            ? `上传线程异常退出(${code}),任务:${taskName}`
-                            : `上传线程异常退出(${code})`
-                    ));
-                }
-            });
-
-            assignNextTask(worker);
-        }
+    const progress = createUploadProgress({
+        label: options.label,
+        sourcePath: options.sourcePath,
+        targetPath: options.displayTargetPath ?? (targetPath || "/"),
+        total: objList.length,
+        workerCount
     });
 
-    return failedUploads;
+    progress.start();
+
+    if (workerCount === 0) {
+        progress.finish();
+        return {
+            total: objList.length,
+            workerCount,
+            successfulCount: 0,
+            failedUploads
+        };
+    }
+
+    try {
+        await new Promise<void>((resolve, reject) => {
+            const workers = new Set<Worker>();
+            const activeTasks = new Map<Worker, PendingTask | null>();
+            const workerScriptPath = getWorkerScriptPath();
+            const workerData: UploadWorkerData = {
+                ossConfig: getOssConfig(),
+                targetPath
+            };
+            let settled = false;
+            let shuttingDown = false;
+
+            const rejectAll = (error: Error) => {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+                shuttingDown = true;
+
+                for (const worker of workers) {
+                    worker.removeAllListeners("message");
+                    worker.removeAllListeners("error");
+                    worker.removeAllListeners("exit");
+                    worker.terminate().catch(() => undefined);
+                }
+
+                reject(error);
+            };
+
+            const maybeResolve = () => {
+                if (settled) {
+                    return;
+                }
+
+                if (completedCount !== objList.length) {
+                    return;
+                }
+
+                const hasActiveTask = [...activeTasks.values()].some(task => task !== null);
+                if (hasActiveTask) {
+                    return;
+                }
+
+                settled = true;
+                resolve();
+            };
+
+            const shutdownWorker = (worker: Worker) => {
+                activeTasks.set(worker, null);
+                const shutdownMessage: UploadWorkerRequest = { type: "shutdown" };
+                worker.postMessage(shutdownMessage);
+            };
+
+            const assignNextTask = (worker: Worker) => {
+                if (settled) {
+                    return;
+                }
+
+                const nextTask = taskQueue.shift();
+                if (!nextTask) {
+                    shutdownWorker(worker);
+                    maybeResolve();
+                    return;
+                }
+
+                activeTasks.set(worker, nextTask);
+                const uploadMessage: UploadWorkerRequest = {
+                    type: "upload",
+                    taskId: nextTask.taskId,
+                    obj: nextTask.obj
+                };
+                worker.postMessage(uploadMessage);
+            };
+
+            for (let index = 0; index < workerCount; index++) {
+                const worker = new Worker(workerScriptPath, { workerData });
+                workers.add(worker);
+                activeTasks.set(worker, null);
+
+                worker.on("message", (message: UploadWorkerResponse) => {
+                    const currentTask = activeTasks.get(worker);
+                    if (!currentTask) {
+                        return;
+                    }
+
+                    activeTasks.set(worker, null);
+                    completedCount++;
+
+                    if (message.type === "success") {
+                        progress.onSuccess(message.name);
+                    } else {
+                        failedUploads.push({
+                            name: message.name,
+                            error: message.error
+                        });
+                        progress.onFailure(message.name, message.error);
+                    }
+
+                    assignNextTask(worker);
+                    maybeResolve();
+                });
+
+                worker.on("error", error => {
+                    rejectAll(error instanceof Error ? error : new Error(String(error)));
+                });
+
+                worker.on("exit", code => {
+                    workers.delete(worker);
+                    const currentTask = activeTasks.get(worker);
+                    activeTasks.delete(worker);
+
+                    if (shuttingDown) {
+                        return;
+                    }
+
+                    if (code !== 0) {
+                        const taskName = currentTask?.obj.name;
+                        rejectAll(new Error(
+                            taskName
+                                ? `上传线程异常退出(${code}),任务:${taskName}`
+                                : `上传线程异常退出(${code})`
+                        ));
+                    }
+                });
+
+                assignNextTask(worker);
+            }
+        });
+    } catch (error) {
+        progress.abort(error);
+        throw error;
+    }
+
+    progress.finish();
+
+    return {
+        total: objList.length,
+        workerCount,
+        successfulCount: objList.length - failedUploads.length,
+        failedUploads
+    };
 }
 
-export default async function uploadOSS(objList: UploadObject[], targetPath = "") {
-    try {
-        const failedUploads = await runUploadWorkers(objList, targetPath);
+export default async function uploadOSS(
+    objList: UploadObject[],
+    targetPath = "",
+    options: UploadRunOptions
+): Promise<UploadSummary> {
+    const summary = await runUploadWorkers(objList, targetPath, options);
 
-        if (failedUploads.length > 0) {
-            throw new Error(`共有${failedUploads.length}个文件上传失败。`);
-        }
-
-        console.log("静态资源上传至 OSS 成功!");
-    } catch (e) {
-        console.error("静态资源上传至 OSS 失败!");
-        console.error(e);
-        throw e;
+    if (summary.failedUploads.length > 0) {
+        throw new Error(`共有${summary.failedUploads.length}个文件上传失败。`);
     }
+
+    return summary;
 }

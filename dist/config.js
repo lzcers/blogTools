@@ -3,13 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.configBlogAppPath = exports.configBlogPath = exports.ossConfig = exports.config = void 0;
+exports.getConfig = getConfig;
+exports.getOssConfig = getOssConfig;
+exports.getConfigBlogPath = getConfigBlogPath;
+exports.getConfigBlogAppPath = getConfigBlogAppPath;
+exports.getLoadedEnvPath = getLoadedEnvPath;
 exports.showConfig = showConfig;
 exports.loadConfig = loadConfig;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const os_1 = __importDefault(require("os"));
 const ENV_FILE_NAME = ".env";
+let envLoaded = false;
+let loadedEnvPath = null;
+let cachedConfig = null;
 // 环境变量映射
 const ENV_MAPPING = {
     region: "BLOG_OSS_REGION",
@@ -72,14 +79,18 @@ function parseEnvFile(content) {
  * 从 .env 文件加载环境变量
  */
 function loadEnvFile() {
-    const envPath = findEnvFile();
-    if (!envPath) {
+    if (envLoaded) {
+        return;
+    }
+    envLoaded = true;
+    loadedEnvPath = findEnvFile();
+    if (!loadedEnvPath) {
         return;
     }
     try {
-        const content = fs_1.default.readFileSync(envPath, "utf-8");
+        const content = fs_1.default.readFileSync(loadedEnvPath, "utf-8");
         const envMap = parseEnvFile(content);
-        console.log(`使用环境变量文件: ${envPath}`);
+        console.log(`使用环境变量文件: ${loadedEnvPath}`);
         Object.entries(envMap).forEach(([key, value]) => {
             if (process.env[key] === undefined) {
                 process.env[key] = value;
@@ -87,7 +98,7 @@ function loadEnvFile() {
         });
     }
     catch (e) {
-        console.error(`.env 文件解析失败: ${envPath}`);
+        console.error(`.env 文件解析失败: ${loadedEnvPath}`);
         console.error(e);
         process.exit(1);
     }
@@ -121,6 +132,9 @@ function validateConfig(config) {
  * 加载配置（优先级：进程环境变量 > .env 文件 > 默认值）
  */
 function loadConfig() {
+    if (cachedConfig) {
+        return cachedConfig;
+    }
     loadEnvFile();
     const config = {
         oss: {
@@ -143,22 +157,30 @@ function loadConfig() {
         console.error("  2. 写入 BLOG_OSS_ACCESS_KEY_ID 等环境变量");
         process.exit(1);
     }
-    return config;
+    cachedConfig = config;
+    return cachedConfig;
 }
-// 导出配置实例
-const config = loadConfig();
-exports.config = config;
-// 导出兼容旧代码的格式
-const ossConfig = config.oss;
-exports.ossConfig = ossConfig;
-const configBlogPath = config.postsDir;
-exports.configBlogPath = configBlogPath;
-const configBlogAppPath = config.appDir;
-exports.configBlogAppPath = configBlogAppPath;
+function getConfig() {
+    return loadConfig();
+}
+function getOssConfig() {
+    return loadConfig().oss;
+}
+function getConfigBlogPath() {
+    return loadConfig().postsDir;
+}
+function getConfigBlogAppPath() {
+    return loadConfig().appDir;
+}
+function getLoadedEnvPath() {
+    loadEnvFile();
+    return loadedEnvPath;
+}
 /**
  * 显示当前配置（隐藏敏感信息）
  */
 function showConfig() {
+    const config = loadConfig();
     console.log("\n当前配置:");
     console.log(`  OSS Region: ${config.oss.region}`);
     console.log(`  OSS Bucket: ${config.oss.bucket}`);

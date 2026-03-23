@@ -17,6 +17,9 @@ interface AppConfig {
 }
 
 const ENV_FILE_NAME = ".env";
+let envLoaded = false;
+let loadedEnvPath: string | null = null;
+let cachedConfig: AppConfig | null = null;
 
 // 环境变量映射
 const ENV_MAPPING = {
@@ -95,15 +98,20 @@ function parseEnvFile(content: string): Record<string, string> {
  * 从 .env 文件加载环境变量
  */
 function loadEnvFile(): void {
-    const envPath = findEnvFile();
-    if (!envPath) {
+    if (envLoaded) {
+        return;
+    }
+
+    envLoaded = true;
+    loadedEnvPath = findEnvFile();
+    if (!loadedEnvPath) {
         return;
     }
 
     try {
-        const content = fs.readFileSync(envPath, "utf-8");
+        const content = fs.readFileSync(loadedEnvPath, "utf-8");
         const envMap = parseEnvFile(content);
-        console.log(`使用环境变量文件: ${envPath}`);
+        console.log(`使用环境变量文件: ${loadedEnvPath}`);
 
         Object.entries(envMap).forEach(([key, value]) => {
             if (process.env[key] === undefined) {
@@ -111,7 +119,7 @@ function loadEnvFile(): void {
             }
         });
     } catch (e) {
-        console.error(`.env 文件解析失败: ${envPath}`);
+        console.error(`.env 文件解析失败: ${loadedEnvPath}`);
         console.error(e);
         process.exit(1);
     }
@@ -150,6 +158,10 @@ function validateConfig(config: AppConfig): string[] {
  * 加载配置（优先级：进程环境变量 > .env 文件 > 默认值）
  */
 function loadConfig(): AppConfig {
+    if (cachedConfig) {
+        return cachedConfig;
+    }
+
     loadEnvFile();
 
     const config: AppConfig = {
@@ -175,21 +187,37 @@ function loadConfig(): AppConfig {
         process.exit(1);
     }
 
-    return config;
+    cachedConfig = config;
+    return cachedConfig;
 }
 
-// 导出配置实例
-const config = loadConfig();
+function getConfig(): AppConfig {
+    return loadConfig();
+}
 
-// 导出兼容旧代码的格式
-const ossConfig = config.oss;
-const configBlogPath = config.postsDir;
-const configBlogAppPath = config.appDir;
+function getOssConfig(): OSSConfig {
+    return loadConfig().oss;
+}
+
+function getConfigBlogPath(): string {
+    return loadConfig().postsDir;
+}
+
+function getConfigBlogAppPath(): string {
+    return loadConfig().appDir;
+}
+
+function getLoadedEnvPath(): string | null {
+    loadEnvFile();
+    return loadedEnvPath;
+}
 
 /**
  * 显示当前配置（隐藏敏感信息）
  */
 function showConfig(): void {
+    const config = loadConfig();
+
     console.log("\n当前配置:");
     console.log(`  OSS Region: ${config.oss.region}`);
     console.log(`  OSS Bucket: ${config.oss.bucket}`);
@@ -210,10 +238,11 @@ function maskSecret(secret: string): string {
 }
 
 export {
-    config,
-    ossConfig,
-    configBlogPath,
-    configBlogAppPath,
+    getConfig,
+    getOssConfig,
+    getConfigBlogPath,
+    getConfigBlogAppPath,
+    getLoadedEnvPath,
     showConfig,
     loadConfig,
     type AppConfig,
