@@ -138,10 +138,10 @@ async function runUploadWorkers(objList, targetPath, options) {
                     assignNextTask(worker);
                     maybeResolve();
                 });
-                worker.on("error", error => {
+                worker.on("error", (error) => {
                     rejectAll(error instanceof Error ? error : new Error(String(error)));
                 });
-                worker.on("exit", code => {
+                worker.on("exit", (code) => {
                     workers.delete(worker);
                     const currentTask = activeTasks.get(worker);
                     activeTasks.delete(worker);

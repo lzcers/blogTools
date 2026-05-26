@@ -41,14 +41,19 @@ const DEFAULTS = {
  * 查找 .env 文件
  */
 function findEnvFile(): string | null {
-    const cwdEnvPath = path.join(process.cwd(), ENV_FILE_NAME);
-    if (fs.existsSync(cwdEnvPath)) {
-        return cwdEnvPath;
-    }
+    // 优先从脚本所在包目录查找，避免从任意 cwd 执行 CLI 时丢失配置。
+    const envSearchDirs = [
+        path.resolve(__dirname, ".."),
+        __dirname,
+        process.cwd(),
+        os.homedir()
+    ];
 
-    const homeEnvPath = path.join(os.homedir(), ENV_FILE_NAME);
-    if (fs.existsSync(homeEnvPath)) {
-        return homeEnvPath;
+    for (const dir of envSearchDirs) {
+        const envPath = path.join(dir, ENV_FILE_NAME);
+        if (fs.existsSync(envPath)) {
+            return envPath;
+        }
     }
 
     return null;

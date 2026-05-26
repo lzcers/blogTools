@@ -44,23 +44,26 @@ port.on("message", async (message: UploadWorkerRequest) => {
     if (message.type === "shutdown") {
         port.close();
         process.exit(0);
+        return;
     }
 
+    const uploadMessage = message;
+
     try {
-        const data = await resolveUploadData(message.obj);
-        await client.put(targetPath + message.obj.name, data);
+        const data = await resolveUploadData(uploadMessage.obj);
+        await client.put(targetPath + uploadMessage.obj.name, data);
 
         const successMessage: UploadWorkerSuccessMessage = {
             type: "success",
-            taskId: message.taskId,
-            name: message.obj.name
+            taskId: uploadMessage.taskId,
+            name: uploadMessage.obj.name
         };
         port.postMessage(successMessage);
     } catch (error) {
         const errorMessage: UploadWorkerErrorMessage = {
             type: "error",
-            taskId: message.taskId,
-            name: message.obj.name,
+            taskId: uploadMessage.taskId,
+            name: uploadMessage.obj.name,
             error: serializeError(error)
         };
         port.postMessage(errorMessage);

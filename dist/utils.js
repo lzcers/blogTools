@@ -14,13 +14,15 @@ const front_matter_1 = __importDefault(require("front-matter"));
 // 拿到所有的文章生成目录
 function genPostMetadatalist(postsDir) {
     const arrPosts = fs_1.default.readdirSync(postsDir, { withFileTypes: true })
-        .filter(dirent => dirent.isFile() && !dirent.name.match(/(.json|DS_Store)/))
-        .map(dirent => dirent.name);
+        .filter((dirent) => dirent.isFile() && !dirent.name.match(/(.json|DS_Store)/))
+        .map((dirent) => dirent.name);
     return Promise.all(arrPosts.map((i, index) => new Promise((resolve, reject) => {
         const filePath = path_1.default.format({ dir: postsDir, base: i });
         fs_1.default.readFile(filePath, "utf8", (err, data) => {
-            if (err)
+            if (err) {
                 reject(err);
+                return;
+            }
             const { attributes } = (0, front_matter_1.default)(data);
             resolve({
                 fileName: i,
@@ -46,10 +48,11 @@ function getAllFilesName(rootPath) {
     const filesPath = [];
     const getPathFiles = (p) => {
         // 判断是否存在，判断是否是目录或是文件
-        if (!fs_1.default.existsSync(p))
-            return [];
+        if (!fs_1.default.existsSync(p)) {
+            return;
+        }
         const files = fs_1.default.readdirSync(p, { withFileTypes: true });
-        files.forEach(file => {
+        files.forEach((file) => {
             if (file.isFile())
                 filesPath.push(path_1.default.join(p, file.name));
             if (file.isDirectory())

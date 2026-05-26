@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs, { type Dirent } from "fs";
 import path from "path";
 import fm from "front-matter";
 
@@ -19,14 +19,18 @@ interface PostMetadata {
 // 拿到所有的文章生成目录
 function genPostMetadatalist(postsDir: string) {
     const arrPosts = fs.readdirSync(postsDir, { withFileTypes: true })
-        .filter(dirent => dirent.isFile() && !dirent.name.match(/(.json|DS_Store)/))
-        .map(dirent => dirent.name);
+        .filter((dirent: Dirent) => dirent.isFile() && !dirent.name.match(/(.json|DS_Store)/))
+        .map((dirent: Dirent) => dirent.name);
 
     return Promise.all(
-        arrPosts.map((i, index) => new Promise<PostMetadata>((resolve, reject) => {
+        arrPosts.map((i: string, index: number) => new Promise<PostMetadata>((resolve, reject) => {
             const filePath = path.format({ dir: postsDir, base: i });
-            fs.readFile(filePath, "utf8", (err, data) => {
-                if (err) reject(err);
+            fs.readFile(filePath, "utf8", (err: NodeJS.ErrnoException | null, data: string) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
                 const { attributes } = fm<PostFrontMatter>(data);
                 resolve({
                     fileName: i,
@@ -54,11 +58,14 @@ function replacePostAssetUrl(postStr: string) {
 
 function getAllFilesName(rootPath: string) {
     const filesPath: string[] = [];
-    const getPathFiles = (p: string) => {
+    const getPathFiles = (p: string): void => {
         // 判断是否存在，判断是否是目录或是文件
-        if (!fs.existsSync(p)) return [];
+        if (!fs.existsSync(p)) {
+            return;
+        }
+
         const files = fs.readdirSync(p, { withFileTypes: true });
-        files.forEach(file => {
+        files.forEach((file: Dirent) => {
             if (file.isFile()) filesPath.push(path.join(p, file.name));
             if (file.isDirectory()) getPathFiles(path.join(p, file.name));
         });
