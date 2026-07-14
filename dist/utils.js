@@ -36,13 +36,26 @@ function genPostMetadatalist(postsDir) {
 }
 // 替换博文中的图片链接
 function replacePostAssetUrl(postStr) {
-    return postStr.replace(/!\[([^\]]*)\]\((?!http|https|\/)(.*?)\)/g, (match, altText, url) => {
+    // 标准 Markdown 链接: ![alt](url)
+    let result = postStr.replace(/!\[([^\]]*)\]\((?!http|https|\/)(.*?)\)/g, (match, altText, url) => {
         const imageName = url.trim().split(/\\|\//).pop()?.trim();
         if (imageName) {
             return `![${altText}](articles/assets/${imageName})`;
         }
         return match;
     });
+    // Obsidian Wiki 链接: ![[path/to/image.png]]
+    result = result.replace(/!\[\[(?!http|https|\/\/)([^\]]+)\]\]/g, (match, url) => {
+        const trimmedUrl = url.trim();
+        const imageName = trimmedUrl.split(/\\|\//).pop()?.trim();
+        if (imageName) {
+            // 提取文件名作为 alt
+            const altText = imageName.replace(/\.[^.]+$/, '');
+            return `![${altText}](articles/assets/${imageName})`;
+        }
+        return match;
+    });
+    return result;
 }
 function getAllFilesName(rootPath) {
     const filesPath = [];
