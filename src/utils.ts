@@ -49,7 +49,7 @@ function replacePostAssetUrl(postStr: string) {
     return postStr.replace(/!\[([^\]]*)\]\((?!http|https|\/)(.*?)\)/g, (match, altText, url) => {
         const imageName = url.trim().split(/\\|\//).pop()?.trim();
         if (imageName) {
-            return `![${altText}](articles/imgs/${imageName})`;
+            return `![${altText}](articles/assets/${imageName})`;
         }
         return match;
     });
